@@ -31,6 +31,15 @@ interface ProgressDataPoint {
   'התמדה': number;
 }
 
+interface AnomalyPatient {
+  id: number;
+  name: string;
+  issue: string;
+  anomalyType: 'slow' | 'fast';
+  percentage: number;
+  recommendation: string;
+}
+
 interface PatientProgram {
   patient: Patient;
   program: string;
@@ -95,9 +104,38 @@ const rehabilitationPrograms: RehabProgram[] = [
   },
 ];
 
-const Dashboard: React.FC = () => {
+// נתוני דוגמה למטופלים עם התקדמות חריגה
+const anomalyPatientsData: AnomalyPatient[] = [
+  { 
+    id: 2, 
+    name: 'שרה כהן', 
+    issue: 'פציעת ACL', 
+    anomalyType: 'slow', 
+    percentage: -15, 
+    recommendation: 'מומלץ לבדוק מחדש את תוכנית השיקום ולפשט חלק מהתרגילים'
+  },
+  { 
+    id: 4, 
+    name: 'מיכל רביב', 
+    issue: 'דלקת בגיד אכילס', 
+    anomalyType: 'fast', 
+    percentage: 25, 
+    recommendation: 'יש לבדוק אם המטופלת מבצעת את התרגילים בעצימות גבוהה מדי'
+  },
+  { 
+    id: 3, 
+    name: 'דוד לוי', 
+    issue: 'החלפת מפרק ירך', 
+    anomalyType: 'slow', 
+    percentage: -20, 
+    recommendation: 'יש לשקול הפניה לבדיקה מקיפה נוספת לנוכח העיכוב המשמעותי בשיקום'
+  },
+];
+
+const PhysiotherapyDashboard: React.FC = () => {
   const [showProgramModal, setShowProgramModal] = useState<boolean>(false);
   const [showProgressModal, setShowProgressModal] = useState<boolean>(false);
+  const [showAlertsModal, setShowAlertsModal] = useState<boolean>(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<RehabProgram | null>(null);
   const [patientProgram, setPatientProgram] = useState<PatientProgram | null>(null);
@@ -168,11 +206,27 @@ const Dashboard: React.FC = () => {
     setSelectedProgram(program);
     setExercises([...program.exercises]);
   };
+  
+  // שליחת הודעת בדיקה למטופל
+  const handleSendCheckupMessage = (patientName: string): void => {
+    alert(`הודעת בדיקה נשלחה ל${patientName}`);
+  };
 
   return (
     <div dir="rtl" className="bg-gray-100 min-h-screen p-6">
       <header className="bg-white shadow rounded-lg p-4 mb-6">
-        <h1 className="text-2xl font-bold text-blue-800">דאשבורד פיזיותרפיה</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-blue-800">מרכז המטופלים שלי</h1>
+          <button 
+            onClick={() => setShowAlertsModal(true)}
+            className="bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <span className="mr-2">התראות חריגות</span>
+            <span className="bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              3
+            </span>
+          </button>
+        </div>
       </header>
 
       {/* דאשבורד מטופלים */}
@@ -206,7 +260,7 @@ const Dashboard: React.FC = () => {
                       תוכנית שיקום
                     </button>
                     <button 
-                      className="bg-green-500 text-white px-3 py-1 rounded"
+                      className="bg-green-500 text-white px-3 py-1 rounded ml-2"
                       onClick={() => handleProgressClick(patient)}
                     >
                       מעקב התקדמות
@@ -358,6 +412,106 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* מודל התראות התקדמות חריגה */}
+      {showAlertsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">התראות חריגות</h2>
+                <button 
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowAlertsModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {anomalyPatientsData.map(patient => (
+                  <div key={patient.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{patient.name}</h3>
+                        <p className="text-gray-600">{patient.issue}</p>
+                      </div>
+                      <span 
+                        className={`px-2 py-1 rounded text-white text-sm font-medium ${
+                          patient.anomalyType === 'slow' 
+                            ? 'bg-red-500' 
+                            : 'bg-red-500'
+                        }`}
+                      >
+                        {patient.anomalyType === 'slow' ? 'התקדמות איטית' : 'התקדמות מהירה מדי'}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <div className="flex items-center">
+                        <span className="font-medium">סטייה מהממוצע:</span>
+                        <span 
+                          className={`ml-2 font-bold ${
+                            patient.anomalyType === 'slow' 
+                              ? 'text-red-600' 
+                              : 'text-orange-600'
+                          }`}
+                        >
+                          {patient.percentage > 0 ? '+' : ''}{patient.percentage}%
+                        </span>
+                      </div>
+                      <p className="mt-2 text-gray-700">{patient.recommendation}</p>
+                    </div>
+                    
+                    <div className="mt-3 flex space-x-2">
+                      <button 
+                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm ml-2"
+                        onClick={() => {
+                          const patientData = patientsData.find(p => p.id === patient.id);
+                          if (patientData) {
+                            setSelectedPatient(patientData);
+                            setShowProgressModal(true);
+                            setShowAlertsModal(false);
+                          }
+                        }}
+                      >
+                        צפה בהתקדמות
+                      </button>
+                      <button 
+                        className="bg-green-500 text-white px-3 py-1 rounded text-sm ml-2"
+                        onClick={() => {
+                          const patientData = patientsData.find(p => p.id === patient.id);
+                          if (patientData) {
+                            handleProgramClick(patientData);
+                            setShowAlertsModal(false);
+                          }
+                        }}
+                      >
+                        עדכן תוכנית
+                      </button>
+                      <button 
+                        className="bg-purple-500 text-white px-3 py-1 rounded text-sm"
+                        onClick={() => handleSendCheckupMessage(patient.name)}
+                      >
+                        שלח הודעת בדיקה
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-end mt-6">
+                <button 
+                  className="bg-blue-600 text-white px-4 py-2 rounded"
+                  onClick={() => setShowAlertsModal(false)}
+                >
+                  סגור
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* מודל מעקב התקדמות */}
       {showProgressModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -484,4 +638,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard;
+export default PhysiotherapyDashboard;
